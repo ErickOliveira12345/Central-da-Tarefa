@@ -1,4 +1,4 @@
-# Gerencial Local modular (React + Vite)
+# Central da Tarefa (React + Vite)
 
 ## Executar
 `npm install` e `npm run dev`. Para testar PWA: `npm run build` e `npm run preview`; para instalar no celular publique a pasta `dist/` em HTTPS.

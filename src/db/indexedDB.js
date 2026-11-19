@@ -17,6 +17,20 @@ export const STORES = [
   'fotosServicosExecutados'
 ];
 
+// Avisa o aplicativo quando os dados locais são alterados.
+function notificarAlteracao(store) {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(
+    new CustomEvent('central-da-tarefa:dados-alterados', {
+      detail: {
+        store,
+        atualizadoEm: Date.now()
+      }
+    })
+  );
+}
+
 // Abre o banco e cria apenas as tabelas que ainda não existem.
 export function openDB() {
   return new Promise((resolve, reject) => {
@@ -92,6 +106,7 @@ export async function save(store, item) {
 
     tx.oncomplete = () => {
       database.close();
+      notificarAlteracao(store);
       resolve();
     };
 
@@ -118,6 +133,7 @@ export async function remove(store, id) {
 
     tx.oncomplete = () => {
       database.close();
+      notificarAlteracao(store);
       resolve();
     };
 
@@ -187,6 +203,7 @@ export async function deletePhotosByServiceId(serviceId) {
 
     tx.oncomplete = () => {
       database.close();
+      notificarAlteracao('fotosServicosExecutados');
       resolve();
     };
 
@@ -268,7 +285,7 @@ export async function exportBackup() {
 }
 
 // Importa backups antigos e novos.
-export async function importBackup(data) {
+export async function importBackup(data, options = {}) {
   let incoming;
 
   // Compatibilidade com o formato antigo da versão HTML.
@@ -353,6 +370,9 @@ export async function importBackup(data) {
 
     tx.oncomplete = () => {
       database.close();
+      if (options.notificar !== false) {
+        notificarAlteracao('todos');
+      }
       resolve();
     };
 

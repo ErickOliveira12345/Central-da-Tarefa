@@ -5,3 +5,16 @@ dist/
 .env.*.local
 .vscode/
 *.log
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+**/local.properties
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Chaves e certificados
+*.jks
+*.keystore

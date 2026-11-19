@@ -1,8 +1,9 @@
 
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: '/Central-da-Tarefa/',
-});
+  base: mode === 'capacitor' ? './' : '/Central-da-Tarefa/',
+}));

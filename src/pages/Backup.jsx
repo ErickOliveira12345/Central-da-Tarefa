@@ -1,29 +1,60 @@
 
+
 import React, { useState } from 'react';
 import {
   exportBackup,
   importBackup
 } from '../db/indexedDB';
 import { useData } from '../context/DataContext';
+import { Capacitor } from '@capacitor/core';
+import { autorizarGoogleDrive } from '../services/googleDrive';
 
 export default function Backup() {
-  // Armazena mensagens de sucesso ou erro.
   const [message, setMessage] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
-  // Obtém a função que atualiza os dados do sistema.
   const { refresh } = useData();
+
+  // Testar a autorização do Google Drive.
+  async function connectGoogleDrive() {
+    if (!Capacitor.isNativePlatform()) {
+      setMessage(
+        'A autorização do Google Drive está disponível no aplicativo Android.'
+      );
+      return;
+    }
+
+    try {
+      setAuthLoading(true);
+      setMessage('');
+
+      const accessToken = await autorizarGoogleDrive();
+
+      if (!accessToken) {
+        throw new Error('Não foi possível obter o token do Google.');
+      }
+
+      setMessage(
+        'Autorização Google concedida! Nenhum arquivo foi enviado ainda.'
+      );
+    } catch (error) {
+      setMessage(
+        'Não foi possível autorizar: ' + error.message
+      );
+    } finally {
+      setAuthLoading(false);
+    }
+  }
 
   // Exportar os dados do sistema para um arquivo JSON.
   async function download() {
     try {
-      // Gera o conteúdo JSON com formatação legível.
       const json = JSON.stringify(
         await exportBackup(),
         null,
         2
       );
 
-      // Cria um arquivo temporário para download.
       const url = URL.createObjectURL(
         new Blob(
           [json],
@@ -31,42 +62,32 @@ export default function Backup() {
         )
       );
 
-      // Cria um link temporário para baixar o arquivo.
       const a = document.createElement('a');
-
       a.href = url;
 
-      // Define o nome do arquivo com a data atual.
       a.download =
         'gerencial-backup-' +
         new Date().toISOString().slice(0, 10) +
         '.json';
 
-      // Inicia o download do backup.
       a.click();
 
-      // Libera a URL temporária após o download.
       setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-      // Informa que o backup foi gerado.
       setMessage(
         'Backup gerado. Guarde o arquivo em local seguro.'
       );
     } catch (e) {
-      // Exibe o erro caso a exportação falhe.
       setMessage(e.message);
     }
   }
 
   // Restaurar os dados a partir de um arquivo JSON.
   async function restore(e) {
-    // Obtém o arquivo selecionado pelo usuário.
     const file = e.target.files?.[0];
 
-    // Encerra se nenhum arquivo tiver sido selecionado.
     if (!file) return;
 
-    // Solicita confirmação antes de substituir os dados atuais.
     if (
       !window.confirm(
         'Restaurar substitui TODOS os dados atuais. Deseja continuar?'
@@ -77,29 +98,21 @@ export default function Backup() {
     }
 
     try {
-      // Lê o conteúdo do arquivo e converte o JSON em objeto.
       const json = JSON.parse(await file.text());
 
-      // Importa o backup para o armazenamento local.
       await importBackup(json);
-
-      // Atualiza os dados apresentados no sistema.
       await refresh();
 
-      // Informa que a restauração foi concluída.
       setMessage('Backup restaurado.');
     } catch (err) {
-      // Exibe o erro caso a restauração falhe.
       setMessage('Erro: ' + err.message);
     }
 
-    // Permite selecionar novamente o mesmo arquivo.
     e.target.value = '';
   }
 
   return (
     <>
-      {/* Cabeçalho da página de backup. */}
       <header className="page-header">
         <div>
           <h1>Backup</h1>
@@ -109,7 +122,27 @@ export default function Backup() {
         </div>
       </header>
 
-      {/* Seção para exportar os dados do sistema. */}
+      {/* Backup online no Google Drive */}
+      <section className="panel">
+        <h2>Backup online</h2>
+
+        <p>
+          Autorize o acesso à sua conta Google para preparar
+          o backup automático no seu Google Drive.
+        </p>
+
+        <button
+          className="primary"
+          onClick={connectGoogleDrive}
+          disabled={authLoading}
+        >
+          {authLoading
+            ? 'Aguardando autorização...'
+            : 'Conectar ao Google Drive'}
+        </button>
+      </section>
+
+      {/* Exportação manual */}
       <section className="panel">
         <h2>Exportar dados</h2>
 
@@ -125,7 +158,7 @@ export default function Backup() {
         </button>
       </section>
 
-      {/* Seção para restaurar os dados de um backup. */}
+      {/* Restauração manual */}
       <section className="panel">
         <h2>Restaurar dados</h2>
 
@@ -141,7 +174,6 @@ export default function Backup() {
         />
       </section>
 
-      {/* Exibe o resultado da operação para o usuário. */}
       {message && (
         <p role="status">
           {message}
